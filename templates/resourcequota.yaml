@@ -1,0 +1,22 @@
+# ResourceQuota — caps total resource consumption for the mediqueue namespace.
+# Prevents runaway scaling from consuming cluster-wide capacity.
+# Values sized for production baseline + 2× headroom for burst.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mediqueue-quota
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+spec:
+  hard:
+    pods: "40"
+    requests.cpu: "8"
+    requests.memory: 8Gi
+    limits.cpu: "16"
+    limits.memory: 16Gi
+    persistentvolumeclaims: "10"
+    requests.storage: 200Gi
+    services: "10"
+    secrets: "20"
+    configmaps: "20"

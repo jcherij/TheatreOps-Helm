@@ -1,0 +1,25 @@
+# PriorityClass — API tier gets elevated scheduling priority over workers.
+# Ensures OR scheduling API remains available under node pressure;
+# worker pods are preemptible relative to the API but above cluster default.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: mediqueue-api-high
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+value: 1000000
+globalDefault: false
+description: "High priority for MediQueue API pods — OR scheduling is time-critical"
+preemptionPolicy: PreemptLowerPriority
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: mediqueue-worker-normal
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+value: 500000
+globalDefault: false
+description: "Normal priority for MediQueue worker pods — queue processing is deferrable"
+preemptionPolicy: PreemptLowerPriority

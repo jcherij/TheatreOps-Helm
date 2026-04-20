@@ -1,0 +1,30 @@
+# LimitRange — enforces default and maximum resource boundaries on all containers
+# in the mediqueue namespace. Prevents unbounded resource consumption and ensures
+# pods without explicit limits still get sensible defaults.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mediqueue-limitrange
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 250m
+        memory: 256Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+    - type: PersistentVolumeClaim
+      max:
+        storage: 50Gi
+      min:
+        storage: 1Gi

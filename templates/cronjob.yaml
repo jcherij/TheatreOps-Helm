@@ -1,0 +1,124 @@
+# Queue Cleanup CronJob — purges surgical cases with status 'cancelled' or
+# 'completed' older than the schedule horizon from the live table.
+# Runs nightly at 02:00 local time (UTC).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-queue-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: queue-cleanup
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "mediqueue.labels" . | nindent 12 }}
+            app.kubernetes.io/component: queue-cleanup
+        spec:
+          serviceAccountName: {{ include "mediqueue.workerServiceAccountName" . }}
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: cleanup
+              image: "{{ .Values.image.worker.repository }}:{{ .Values.image.worker.tag }}"
+              imagePullPolicy: {{ .Values.image.worker.pullPolicy }}
+              command: ["python", "tasks/queue_cleanup.py"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              envFrom:
+                - configMapRef:
+                    name: mediqueue-config
+              env:
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mediqueue-db-credentials
+                      key: app-password
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+
+---
+# Audit Archive CronJob — copies processed queue events from PostgreSQL
+# to the audit log store for long-term HIPAA retention.
+# Runs weekly on Sundays at 03:00 UTC.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-audit-archive
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit-archive
+spec:
+  schedule: "0 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "mediqueue.labels" . | nindent 12 }}
+            app.kubernetes.io/component: audit-archive
+        spec:
+          serviceAccountName: {{ include "mediqueue.workerServiceAccountName" . }}
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: archive
+              image: "{{ .Values.image.worker.repository }}:{{ .Values.image.worker.tag }}"
+              imagePullPolicy: {{ .Values.image.worker.pullPolicy }}
+              command: ["python", "tasks/audit_archive.py"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              envFrom:
+                - configMapRef:
+                    name: mediqueue-config
+              env:
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mediqueue-db-credentials
+                      key: app-password
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi

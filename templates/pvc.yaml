@@ -1,0 +1,18 @@
+# PersistentVolumeClaim — worker scratch volume for transient processing artifacts.
+# Workers write intermediate queue processing state here; cleared on pod restart.
+# Separate from the PostgreSQL PVC managed by the postgresql subchart.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-worker-scratch
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.workerScratch.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.workerScratch.size }}

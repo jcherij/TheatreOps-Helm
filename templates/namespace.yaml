@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mediqueue
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    # Pod security enforced at namespace level — all pods must comply
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest

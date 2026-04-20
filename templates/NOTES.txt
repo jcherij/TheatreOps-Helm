@@ -1,0 +1,20 @@
+MediQueue has been deployed successfully.
+
+API endpoint:
+  https://{{ .Values.ingress.host }}
+
+Database:
+  Host:     {{ include "mediqueue.postgresHost" . }}:5432
+  Database: {{ .Values.postgresql.auth.database }}
+
+Redis cache:
+  Host: {{ include "mediqueue.redisHost" . }}:6379
+
+To check pod status:
+  kubectl get pods -n mediqueue
+
+To view API logs:
+  kubectl logs -n mediqueue -l app.kubernetes.io/component=api -f
+
+To view worker logs:
+  kubectl logs -n mediqueue -l app.kubernetes.io/component=worker -f

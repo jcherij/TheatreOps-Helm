@@ -1,0 +1,30 @@
+# Ensure minimum API replicas remain available during node disruptions
+# (rolling upgrades, node pool scaling events)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-api-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.api.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "mediqueue.apiSelectorLabels" . | nindent 6 }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-worker-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.worker.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "mediqueue.workerSelectorLabels" . | nindent 6 }}

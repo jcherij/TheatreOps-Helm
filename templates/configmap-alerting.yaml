@@ -1,0 +1,19 @@
+# Alerting thresholds — referenced by the PrometheusRule and the worker
+# notification dispatcher. Centralised here so thresholds can be tuned
+# without a code deploy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mediqueue-alerting-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+data:
+  # Queue depth threshold — alert if pending surgical cases exceed this count
+  QUEUE_DEPTH_ALERT_THRESHOLD: "50"
+  # API error rate threshold — alert if 5xx rate exceeds this percentage
+  API_ERROR_RATE_THRESHOLD: "5"
+  # Case overrun alert — alert if estimated duration exceeded by this many minutes
+  CASE_OVERRUN_MINUTES: "30"
+  # Notification cooldown — minimum seconds between repeat alerts for same OR room
+  ALERT_COOLDOWN_SECONDS: "300"

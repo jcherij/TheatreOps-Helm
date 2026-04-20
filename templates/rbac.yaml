@@ -1,0 +1,74 @@
+# API Role — read-only access to ConfigMaps and Secrets in the mediqueue namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-api-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["mediqueue-config"]
+    verbs: ["get", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["mediqueue-db-credentials", "mediqueue-redis-credentials"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-api-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "mediqueue.fullname" . }}-api-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mediqueue.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# Worker Role — read-only access to ConfigMaps and Secrets in the namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-worker-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["mediqueue-config"]
+    verbs: ["get", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["mediqueue-db-credentials", "mediqueue-redis-credentials"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-worker-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "mediqueue.fullname" . }}-worker-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mediqueue.workerServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}

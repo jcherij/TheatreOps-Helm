@@ -1,0 +1,63 @@
+# PrometheusRule — defines alerting rules for MediQueue operational health.
+# Fired alerts route to the on-call team via Alertmanager.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    release: prometheus
+spec:
+  groups:
+    - name: mediqueue.api
+      interval: 30s
+      rules:
+        - alert: MediQueueHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{namespace="mediqueue", component="api", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{namespace="mediqueue", component="api"}[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            app: mediqueue
+          annotations:
+            summary: "MediQueue API error rate exceeds 5%"
+            description: "API 5xx rate is {{ "{{" }} $value | humanizePercentage {{ "}}" }} — OR scheduling may be impacted"
+
+        - alert: MediQueueAPIDown
+          expr: |
+            absent(up{namespace="mediqueue", component="api"} == 1)
+          for: 1m
+          labels:
+            severity: critical
+            app: mediqueue
+          annotations:
+            summary: "MediQueue API pods are not running"
+            description: "No healthy API pods detected — OR scheduling is unavailable"
+
+    - name: mediqueue.queue
+      interval: 60s
+      rules:
+        - alert: MediQueueDepthHigh
+          expr: |
+            mediqueue_pending_cases_total{namespace="mediqueue"} > 50
+          for: 5m
+          labels:
+            severity: warning
+            app: mediqueue
+          annotations:
+            summary: "Surgical queue depth exceeds threshold"
+            description: "{{ "{{" }} $value {{ "}}" }} pending cases in queue — review OR capacity"
+
+        - alert: MediQueueWorkerDown
+          expr: |
+            absent(up{namespace="mediqueue", component="worker"} == 1)
+          for: 3m
+          labels:
+            severity: warning
+            app: mediqueue
+          annotations:
+            summary: "MediQueue worker pods are not running"
+            description: "No healthy worker pods — queue processing is paused"

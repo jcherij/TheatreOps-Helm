@@ -1,0 +1,50 @@
+# ServiceMonitor — tells the Prometheus Operator to scrape MediQueue pods.
+# Requires prometheus-operator to be installed in the cluster.
+# API metrics endpoint: /metrics on port 9090 (exposed via service annotation)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    # Label must match the Prometheus Operator's serviceMonitorSelector
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- include "mediqueue.apiSelectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scheme: http
+      honorLabels: true
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "mediqueue.fullname" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediqueue.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- include "mediqueue.workerSelectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scheme: http
+      honorLabels: true
