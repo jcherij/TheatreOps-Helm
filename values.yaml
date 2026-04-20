@@ -1,0 +1,127 @@
+# -----------------------------------------------------------------------
+# MediQueue — Default values
+# Override per environment via -f values-production.yaml
+# -----------------------------------------------------------------------
+
+global:
+  environment: production
+  # All inter-service communication is internal to the cluster.
+  # No external egress required except through the Ingress controller.
+  internalOnly: true
+
+image:
+  api:
+    repository: gcr.io/example-health/mediqueue-api
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: gcr.io/example-health/mediqueue-worker
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+# API service — handles scheduling requests from clinical staff
+api:
+  replicaCount: 3
+  port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Worker — processes queue updates, sends internal notifications
+worker:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Ingress — terminates TLS at the cluster edge
+ingress:
+  enabled: true
+  className: nginx
+  host: mediqueue.example-health.com
+  tls:
+    enabled: true
+    secretName: mediqueue-tls
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  api:
+    minAvailable: 2
+  worker:
+    minAvailable: 1
+
+serviceAccount:
+  annotations: {}
+
+# PostgreSQL subchart — stores scheduling and patient assignment data
+postgresql:
+  enabled: true
+  auth:
+    database: mediqueue
+    username: mediqueue_app
+    existingSecret: mediqueue-db-credentials
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: app-password
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: standard-rwo
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  readReplicas:
+    replicaCount: 1
+
+# Redis subchart — caches OR schedule for low-latency reads
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    existingSecret: mediqueue-redis-credentials
+    existingSecretPasswordKey: redis-password
+  master:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+config:
+  logLevel: info
+  scheduleHorizonDays: 90
+  queueRefreshSeconds: 30
+  # Notifications dispatched internally via worker — no external webhook endpoints
+  notificationsInternal: true
+
+# Worker HPA — separate from PDB; PDB governs disruption, HPA governs scaling
+workerAutoscaling:
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 80
+
+# Worker scratch PVC storage class — may differ from DB storage class
+workerScratch:
+  storageClass: standard-rwo
+  size: 5Gi

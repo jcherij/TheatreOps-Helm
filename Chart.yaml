@@ -1,0 +1,32 @@
+apiVersion: v2
+name: mediqueue
+description: >
+  MediQueue — Operating Room Scheduling and Surgical Queue Manager.
+  Manages OR scheduling, surgical team assignments, and real-time queue status
+  for hospital surgical departments. Handles PHI and must run HIPAA-compliant.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+maintainers:
+  - name: Platform Engineering
+    email: platform@example-health.com
+
+keywords:
+  - healthcare
+  - hipaa
+  - or-scheduling
+  - surgical-queue
+
+dependencies:
+  - name: postgresql
+    version: "14.3.3"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+    alias: postgresql
+
+  - name: redis
+    version: "18.19.4"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+    alias: redis
